@@ -1,58 +1,71 @@
 from flask import Flask, jsonify, request
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
-listOfPeople = [
-    {
-        'id': 1,
-        'nome': 'Mateus de Barros',
-        'idade': 22
-    },
-    {
-        'id': 2,
-        'nome': 'Solaire of Astoria',
-        'idade': 32
-    },
-    {
-        'id': 3,
-        'nome': 'Vendrick',
-        'idade': 45
-    }
-]
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:lilY@@localhost/apipython'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+class Pessoa(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nome = db.Column(db.String(100), nullable=False)
+    idade = db.Column(db.Integer, nullable=False)
+
+    def to_json(self):
+        return {"id": self.id, "nome": self.nome, "idade": self.idade}
+
+with app.app_context():
+    db.create_all()
 
 # Get all
 @app.route('/Pessoas', methods=['GET'])
 def getPerson():
-    return jsonify(listOfPeople)
-# Get
+    pessoas = Pessoa.query.all()
+    return jsonify([pessoas.to_json() for pessoa in pessoas])
 
+# Get
 @app.route('/Pessoas/<int:id>', methods=['GET'])
 def getById(id):
-    for pessoa in listOfPeople:
-        if pessoa.get('id') == id:
-            return jsonify(pessoa)
+    pessoa = Pessoa.query.get(id)
+    if pessoa:
+        return jsonify(pessoa.to_json())
+    return jsonify({"error": "Pessoa não encontrada"}), 404
 
 # Put
-@app.route('/Pessoas/<int:id>',methods=['PUT'])
+@app.route('/Pessoas/<int:id>', methods=['PUT'])
 def updateById(id):
-    pessoaUpdate = request.get_json()
-    for index,person in enumerate(listOfPeople):
-        if person.get('id') == id:
-            listOfPeople[index].update(pessoaUpdate)
-            return jsonify(listOfPeople[index])
+    pessoa = Pessoa.query.get(id)
+    if not pessoa:
+        return jsonify({"error": "Pessoa não encontrada"}), 404
+    data = request.get_json()
+    pessoa.nome = data.get('nome', pessoa.nome)
+    pessoa.idade = data.get('idade', pessoa.idade)
+    db.session.commit()
+    return jsonify(pessoa.to_json())
 
 # Post
-@app.route('/Pessoas',methods=['POST'])
+@app.route('/Pessoas', methods=['POST'])
 def newPerson():
-    person = request.get_json()
-    listOfPeople.append(person)
-    return jsonify(listOfPeople)
-# Delete
-@app.route('/Pessoas/<int:id>',methods=['DELETE'])
-def deletePerson(id):
-    for index, person in enumerate(listOfPeople):
-        if person.get('id') == id:
-            del listOfPeople[index]
-    return jsonify(listOfPeople)
+    data = request.get_json()
+    nova_pessoa = Pessoa(nome=data['nome'], idade=data['idade'])
+    db.session.add(nova_pessoa)
+    db.session.commit()
+    return jsonify(nova_pessoa.to_json()), 201
 
-app.run(port=8080, host='localhost', debug= True)
+# Delete
+@app.route('/Pessoas/<int:id>', methods=['DELETE'])
+def deletePerson(id):
+    pessoa = Pessoa.query.get(id)
+    if not pessoa:
+        return jsonify({"error": "Pessoa não encontrada"}), 404
+    db.session.delete(pessoa)
+    db.session.commit()
+    return jsonify({"message": "Pessoa deletada com sucesso"})
+
+if __name__ == '__main__':
+    app.run(port=8080, host='localhost', debug=True)
+
+
+
