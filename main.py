@@ -1,9 +1,16 @@
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
+from urllib.parse import quote_plus
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:lilY@@localhost/apipython'
+USERNAME = "postgres"
+PASSWORD = quote_plus("lilY@")
+HOST = "localhost"
+PORT = "5432"
+DATABASE = "flaskapi"
+
+app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -23,7 +30,7 @@ with app.app_context():
 @app.route('/Pessoas', methods=['GET'])
 def getPerson():
     pessoas = Pessoa.query.all()
-    return jsonify([pessoas.to_json() for pessoa in pessoas])
+    return jsonify([pessoa.to_json() for pessoa in pessoas])
 
 # Get
 @app.route('/Pessoas/<int:id>', methods=['GET'])
