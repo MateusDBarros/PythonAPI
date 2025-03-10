@@ -5,7 +5,7 @@ from urllib.parse import quote_plus
 app = Flask(__name__)
 
 USERNAME = "postgres"
-PASSWORD = quote_plus("lilY@")
+PASSWORD = quote_plus("***")
 HOST = "localhost"
 PORT = "5432"
 DATABASE = "flaskapi"
